@@ -44,7 +44,7 @@ npm run dev
     - Остальные колонки преобразуются в атрибуты узлов.
  # Структура проекта
  src/
- App.vue # загрузка Excel, поиск, подготовка данных
+ App.vue (загрузка Excel, поиск, подготовка данных)
  
  components/
-  ForceDirectedTree.vue # D3 force‑directed визуализация
+  ForceDirectedTree.vue (D3 force‑directed визуализация)
