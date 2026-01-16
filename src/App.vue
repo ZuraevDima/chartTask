@@ -8,11 +8,11 @@ const fileName = ref('')
 const searchQuery = ref('')
 
 const filteredWorlds = computed(() => {
-  if (!worlds.value || !searchQuery.value.trim()) return worlds.value
+  if (!worlds.value || !searchQuery.value.trim()) return worlds.value //если нет данных, то пустое показываем
   
   const q = searchQuery.value.toLowerCase().trim()
   return worlds.value.filter(w => w.name.toLowerCase().includes(q))
-})
+}) //отбирает(фильтрует) мир по названию для отрисовки
 
 const clearSearch = () => searchQuery.value = ''
 
@@ -38,12 +38,12 @@ const handleFileUpload = (e) => {
     
     if (raw.length < 2) return
 
-    const headers = raw[0].map(h => (h === undefined || h === null) ? '' : String(h).trim())
-    const rows = raw.slice(1)
+    const headers = raw[0].map(h => (h === undefined || h === null) ? '' : String(h).trim()) //вынимаем заголовки
+    const rows = raw.slice(1) //отделяем данные от заголовков
 
     const catIdx = findHeaderIndex(headers, /категор|category|катег/) !== -1
       ? findHeaderIndex(headers, /категор|category|катег/)
-      : 0
+      : 0 //ищем, где колонка "Категория"
 
     const prodIdx = findHeaderIndex(headers, /назван|product|продукт|name/) !== -1
       ? findHeaderIndex(headers, /назван|product|продукт|name/)
@@ -53,7 +53,7 @@ const handleFileUpload = (e) => {
     let id = 0
     let curCat = null
 
-    rows.forEach(row => {
+    rows.forEach(row => { //цикл сборки дерева
       const r = Array.from({ length: headers.length }, (_, i) => row[i] ?? '')
       const catName = String(r[catIdx] ?? '').trim()
       
@@ -70,7 +70,7 @@ const handleFileUpload = (e) => {
       if (!prodName) return
 
       const prod = { id: `prod-${++id}`, name: prodName, children: [] }
-
+      //сбор хар-тик (внуки)
       for (let i = 0; i < headers.length; i++) {
         if (i === catIdx || i === prodIdx) continue
         const hdr = headers[i] || `Колонка ${i}`
@@ -79,7 +79,7 @@ const handleFileUpload = (e) => {
         
         const s = String(val).replace(/\r?\n/g, ' ').trim()
         if (!s) continue
-        prod.children.push({ id: `attr-${++id}`, name: `${hdr}: ${s}` })
+        prod.children.push({ id: `attr-${++id}`, name: `${hdr}: ${s}` }) //добавляем все остальные данные
       }
 
       if (prod.children.length === 0) {
