@@ -135,10 +135,10 @@ function render() {
     allVisibleNodes.push(...visible)
     allLinks.push(...links)
     nodeGroups.push({ 
-      visible,      // только узлы
+      visible,      // только узлы группы(мира)
       links,        // только связи
       worldIndex: i, 
-      baseX: spacing * (i + 1) // центральная
+      baseX: spacing * (i + 1)
     })
   })
 
