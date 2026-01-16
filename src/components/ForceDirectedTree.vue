@@ -1,3 +1,4 @@
+<!-- да -->
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import * as d3 from 'd3'
@@ -132,15 +133,15 @@ function render() {
       n._r = n._baseR
     })
 
-    allVisibleNodes.push(...visible)
-    allLinks.push(...links)
-    nodeGroups.push({ 
-      visible,      // только узлы группы(мира)
-      links,        // только связи
-      worldIndex: i, 
-      baseX: spacing * (i + 1)
-    })
-  })
+   allVisibleNodes.push(...visible)
+   allLinks.push(...links)
+  nodeGroups.push({  
+      visible,      // только узлы 
+      links,        // только связи 
+      worldIndex: i,  
+      baseX: spacing * (i + 1) // центральная 
+    }) 
+  }) 
 
   simulation = d3.forceSimulation(allVisibleNodes)
     .force('link', d3.forceLink(allLinks).id(d => d.data.id)
