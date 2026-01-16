@@ -3,33 +3,26 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import * as d3 from 'd3'
 
 const props = defineProps({
-  worlds: Array
+  worlds: Array//входные данные; массив с иерархией миров
 })
 
-const svgRef = ref(null)
-const containerRef = ref(null)
+const svgRef = ref(null)//ссылка на svg; для прямого доступа к html-элементу через d3
+const containerRef = ref(null)//ссылка на контейнер; для отслеживания размеров окна и центровки
 
 const VIRTUAL_WIDTH = 8000
 const VIRTUAL_HEIGHT = 5000
 
-let simulation = null
-let resizeObserver = null
-let zoomBehavior = null
-let savedTransform = null
+let simulation = null//движок, управляет силами притяжения и отталкивания узлов
+let resizeObserver = null//перерисовывает граф при изменении окна браузера
+let zoomBehavior = null//правила зума
+let savedTransform = null//сохранение зума и позиции
 
-const collapsed = ref(new Set())
-const hoveredNode = ref(null)
+const collapsed = ref(new Set())//хранит id узлов что скрыты
+const hoveredNode = ref(null)//id шарика на котором сейчас мышь
 
 const colorForDepth = d => (d === 0 ? '#5a67d8' : d === 1 ? '#4299e1' : '#48bb78')
 
-function textColorFor(fill) {
-  const c = d3.color(fill)
-  if (!c) return '#000'
-  const lum = (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b) / 255
-  return lum > 0.5 ? '#000' : '#fff'
-}
-
-function breakIntoLines(str, max = 18) {
+function breakIntoLines(str, max = 18) { //делит слова(перенос слов)
   const words = String(str).split(/\s+/)
   const lines = []
   let cur = ''
@@ -41,7 +34,7 @@ function breakIntoLines(str, max = 18) {
   return lines
 }
 
-function toggleCollapse(id) {
+function toggleCollapse(id) { //сворачивание веток
   const s = new Set(collapsed.value)
   if (s.has(id)) s.delete(id); else s.add(id)
   collapsed.value = s
@@ -49,40 +42,42 @@ function toggleCollapse(id) {
 
 function render() {
   if (!props.worlds || !svgRef.value) return
-  const oldPos = new Map()
+  const oldPos = new Map() //создание карты старых позиций
   if (simulation) {
     simulation.nodes().forEach(d => {
       oldPos.set(d.data.id, { x: d.x, y: d.y, fx: d.fx, fy: d.fy })
     })
   }
 
-  if (svgRef.value && zoomBehavior) savedTransform = d3.zoomTransform(svgRef.value)
+  if (svgRef.value && zoomBehavior) 
+    savedTransform = d3.zoomTransform(svgRef.value) //сохранить взгляд камеры и zoom при тыке на узлы
 
   d3.select(svgRef.value).selectAll('*').remove()
-  if (simulation) simulation.stop()
+  if (simulation) simulation.stop() //остановить старую симуляц. расталкивания узлов
 
   const svg = d3.select(svgRef.value)
     .attr('viewBox', [0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT])
     .style('cursor', 'grab')
 
-  const zoomLayer = svg.append('g').attr('class', 'zoom-layer')
+  const zoomLayer = svg.append('g').attr('class', 'zoom-layer') //при зуме или движении карты двигать всё целиком
 
   zoomBehavior = d3.zoom()
-    .scaleExtent([0.8, 6])
+    .scaleExtent([0.8, 8]) //[отдаление, приближ]
     .on('zoom', (e) => zoomLayer.attr('transform', e.transform))
 
   svg.call(zoomBehavior)
 
   const spacing = VIRTUAL_WIDTH / (props.worlds.length + 1) * 1.4
 
-  const allVisibleNodes = []
+  const allVisibleNodes = [] //все кружки
   const allLinks = []
-  const nodeGroups = []
+  const nodeGroups = [] //чтобы каждая категория отдельно
 
   props.worlds.forEach((world, i) => {
-    const root = d3.hierarchy(world)
+    const root = d3.hierarchy(world) //каждый объект теперь дерево со свойствами
     const all = root.descendants()
 
+    //отвечает за прыгание узлов и появление из родит. а не случ. мест
     const visible = all.filter(node => {
       let p = node.parent
       while (p) { if (collapsed.value.has(p.data.id)) return false; p = p.parent }
@@ -94,25 +89,25 @@ function render() {
     visible.forEach(n => {
       n._worldIndex = i
       const existing = oldPos.get(n.data.id)
-      if (existing) {
+      if (existing) { //если узел был на экран; при клике остальн не разлетаются
         n.x = existing.x
         n.y = existing.y
         n.fx = existing.fx
         n.fy = existing.fy
-      } else {
+      } else { //если узел тольк что развернулс
         const baseX = spacing * (i + 1)
         if (n.depth === 0) { 
           n.x = baseX
           n.y = VIRTUAL_HEIGHT / 2 
         } else if (n.depth === 1) {
-          const siblings = n.parent.children.filter(ch => {
+          const siblings = n.parent.children.filter(ch => { //чтобы распределить нескрытых потомков по кругу равномерно
             let p = ch.parent
             while (p) { if (collapsed.value.has(p.data.id)) return false; p = p.parent }
             return true
           })
-          const idx = siblings.indexOf(n)
-          const total = siblings.length
-          const angle = (idx / Math.max(total, 1)) * Math.PI * 2 - Math.PI / 2
+          const idx = siblings.indexOf(n) //порядковый номер узла
+          const total = siblings.length //всего братьев
+          const angle = (idx / Math.max(total, 1)) * Math.PI * 2 - Math.PI / 2 //угол для этого узла
           const r = 350
           n.x = (oldPos.get(n.parent.data.id)?.x || baseX) + Math.cos(angle) * r
           n.y = (oldPos.get(n.parent.data.id)?.y || VIRTUAL_HEIGHT / 2) + Math.sin(angle) * r
@@ -139,7 +134,12 @@ function render() {
 
     allVisibleNodes.push(...visible)
     allLinks.push(...links)
-    nodeGroups.push({ visible, links, worldIndex: i, baseX: spacing * (i + 1) })
+    nodeGroups.push({ 
+      visible,      // только узлы
+      links,        // только связи
+      worldIndex: i, 
+      baseX: spacing * (i + 1) // центральная
+    })
   })
 
   simulation = d3.forceSimulation(allVisibleNodes)
@@ -238,7 +238,6 @@ function render() {
     })
 
     circle.attr('r', d => d._r)
-    text.attr('fill', d => textColorFor(colorForDepth(d.depth)))
   })
 
   simulation.on('tick', () => {
@@ -288,6 +287,10 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+text {
+  fill: white;
+  mix-blend-mode: difference;
+}
 .node { cursor: grab; }
 .node:active { cursor: grabbing; }
 </style>
