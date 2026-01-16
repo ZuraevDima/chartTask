@@ -1,4 +1,3 @@
-<!-- да -->
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import * as d3 from 'd3'
@@ -139,7 +138,7 @@ function render() {
       visible,      // только узлы 
       links,        // только связи 
       worldIndex: i,  
-      baseX: spacing * (i + 1) // центральная 
+      baseX: spacing * (i + 1)
     }) 
   }) 
 
